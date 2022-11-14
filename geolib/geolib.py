@@ -1,10 +1,10 @@
 class GeoLib:
-    def __init__(self, place_name):
+    def __init__(self, place_name, log=False):
         import networkx as nx
         import osmnx as ox
         self.ox = ox
         self.nx = nx
-        self.ox.config(use_cache=True, log_console=True)
+        self.ox.config(use_cache=True, log_console=log)
         print(f'Looking for {place_name}...')
         self.place_name = place_name
         try:
@@ -37,10 +37,10 @@ class GeoLib:
         return route
 
     def street_replacement(self, street):
-        msg = ''
+        msg = f"\"{street}\" doesn't found, do you mean:\n"
         for sn in self.streets:
             if street in sn:
-                msg += f'Do you mean -> "{sn}"?\n'
+                msg += f'  - "{sn}"?\n'
         return msg
 
     def get_block(self, street, num_1, num_2):
@@ -65,15 +65,15 @@ class GeoLib:
             self.plot_route(routes[0], colors[0], orig_dest_size)
         else:
             self.ox.plot_graph_routes(self.place, routes,
-                                    route_colors=colors,
-                                    route_linewidth=6,
-                                    node_size=0,
-                                    bgcolor='k',
-                                    orig_dest_size=orig_dest_size)
+                                      route_colors=colors,
+                                      route_linewidth=6,
+                                      node_size=0,
+                                      bgcolor='k',
+                                      orig_dest_size=orig_dest_size)
 
     def _get_streets(self):
         G = self.ox.graph_from_address(self.place_name,
-                                       dist=200,
+                                       dist=2000,
                                        network_type='walk')
         G = self.ox.get_undirected(G)
         streets = []
