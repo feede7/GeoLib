@@ -4,13 +4,15 @@ class GeoLib:
         import osmnx as ox
         self.ox = ox
         self.nx = nx
+        self.ox.config(use_cache=True, log_console=True)
         print(f'Looking for {place_name}...')
         self.place_name = place_name
         try:
-            self.place = ox.graph_from_place(place_name,
-                                             network_type='walk')
+            self.place = self.ox.graph_from_place(place_name,
+                                                  network_type='walk')
         except Exception as e:
             print(f"City doesn't exist. Msg: {e.message}")
+        self.streets = self._get_streets()
 
     def plot_city(self):
         self.ox.plot_graph(self.place)
@@ -34,7 +36,15 @@ class GeoLib:
                                       weight=name)
         return route
 
+    def street_replacement(self, street):
+        msg = ''
+        for sn in self.streets:
+            if street in sn:
+                msg += f'Do you mean -> "{sn}"?\n'
+        return msg
+
     def get_block(self, street, num_1, num_2):
+        assert street in self.streets, self.street_replacement(street)
         dir_1 = f'{street} {num_1}'
         dir_2 = f'{street} {num_2}'
         name = f'{street} {num_1}-{num_2}'
@@ -60,3 +70,20 @@ class GeoLib:
                                     node_size=0,
                                     bgcolor='k',
                                     orig_dest_size=orig_dest_size)
+
+    def _get_streets(self):
+        G = self.ox.graph_from_address(self.place_name,
+                                       dist=200,
+                                       network_type='walk')
+        G = self.ox.get_undirected(G)
+        streets = []
+        for _, edge in self.ox.graph_to_gdfs(G, nodes=False).fillna('').iterrows():
+            street_name = edge['name']
+            if type(street_name) is list:
+                for sn in street_name:
+                    if sn != '' and sn not in streets:
+                        streets.append(sn)
+            else:
+                if street_name != '' and street_name not in streets:
+                    streets.append(street_name)
+        return streets
