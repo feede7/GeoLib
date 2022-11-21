@@ -33,12 +33,11 @@ class GeoLib:
                                      X=point[1])
         return node
 
-    def get_route(self, dir_1, dir_2, name=''):
+    def get_route(self, dir_1, dir_2):
         geo_1 = self.get_geo_node(dir_1)
         geo_2 = self.get_geo_node(dir_2)
         route = self.nx.shortest_path(self.place, geo_1,
-                                      geo_2,
-                                      weight=name)
+                                      geo_2)
         return route
 
     def street_replacement(self, street):
@@ -48,12 +47,14 @@ class GeoLib:
                 msg += f'  - "{sn}"?\n'
         return msg
 
-    def get_block(self, street, num_1, num_2):
+    def get_block(self, street, num_1, num_2, color):
         assert street in self.streets, self.street_replacement(street)
         dir_1 = f'{street} {num_1}'
         dir_2 = f'{street} {num_2}'
-        name = f'{street} {num_1}-{num_2}'
-        block = self.get_route(dir_1, dir_2, name)
+        block = {}
+        block['route'] = self.get_route(dir_1, dir_2)
+        block['name'] = f'{street} {num_1}-{num_2}'
+        block['color'] = color
         return block
 
     def get_route_html(self, route, route_map, color):
@@ -63,6 +64,7 @@ class GeoLib:
                  }
         assert color in colors.keys()
         return self.ox.plot_route_folium(self.place, route,
+                                         popup_attribute='name',
                                          route_map=route_map,
                                          color=colors[color],
                                          opacity=0.5)
@@ -101,6 +103,8 @@ class GeoLib:
         streets = []
         for _, edge in self.ox.graph_to_gdfs(G, nodes=False).fillna('').iterrows():
             street_name = edge['name']
+            # if street_name == 'Matheu':
+            #     print(edge)
             if type(street_name) is list:
                 for sn in street_name:
                     if sn != '' and sn not in streets:
