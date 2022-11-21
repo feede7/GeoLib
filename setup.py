@@ -20,6 +20,7 @@ setup(
     install_requires=[
                     'osmnx',
                     'matplotlib==3.5',
-                    'scikit-learn'
+                    'scikit-learn',
+                    'folium'
                     ],
 )

@@ -8,14 +8,19 @@ class GeoLib:
         print(f'Looking for {place_name}...')
         self.place_name = place_name
         try:
-            self.place = self.ox.graph_from_place(place_name,
-                                                  network_type='walk')
+            self.place = self.ox.graph_from_place(place_name, network_type='walk')
         except Exception as e:
             print(f"City doesn't exist. Msg: {e.message}")
         self.streets = self._get_streets()
 
+    def get_city_html(self):
+        return self.ox.plot_graph_folium(self.place,
+                                         popup_attribute="name",
+                                         weight=2,
+                                         color="#8b0000")
+
     def plot_city(self):
-        self.ox.plot_graph(self.place)
+        return self.ox.plot_graph(self.place)
 
     def get_geo(self, point_name):
         return self.ox.geocode(point_name)
@@ -50,6 +55,23 @@ class GeoLib:
         name = f'{street} {num_1}-{num_2}'
         block = self.get_route(dir_1, dir_2, name)
         return block
+
+    def get_route_html(self, route, route_map, color):
+        colors = {'r': '#ff0000',
+                  'g': '#00ff00',
+                  'b': '#0000ff',
+                 }
+        assert color in colors.keys()
+        return self.ox.plot_route_folium(self.place, route,
+                                         route_map=route_map,
+                                         color=colors[color],
+                                         opacity=0.5)
+
+    def get_route_html2(self, route, route_map):
+        return self.ox.plot_graph_folium(self.place, route,
+                                         graph_map=route_map,
+                                         color='#00ff00',
+                                         opacity=0.5)
 
     def plot_route(self, route, color, orig_dest_size):
         self.ox.plot_graph_route(self.place, route,
