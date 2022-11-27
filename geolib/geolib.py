@@ -1,3 +1,6 @@
+from random import randint
+
+
 class GeoLib:
     def __init__(self, place_name, log=False):
         import networkx as nx
@@ -11,13 +14,15 @@ class GeoLib:
             self.place = self.ox.graph_from_place(place_name, network_type='walk')
         except Exception as e:
             print(f"City doesn't exist. Msg: {e.message}")
+        print('Gotcha!')
         self.streets = self._get_streets()
 
-    def get_city_html(self):
+    def get_city_html(self, color="#A0A0A0"):
         return self.ox.plot_graph_folium(self.place,
                                          popup_attribute="name",
-                                         weight=2,
-                                         color="#8b0000")
+                                         weight=1,
+                                         color=color,
+                                         opacity=0.4)
 
     def plot_city(self):
         return self.ox.plot_graph(self.place)
@@ -33,22 +38,15 @@ class GeoLib:
                                      X=point[1])
         return node
 
-    def get_route(self, dir_1, dir_2):
-        geo_1 = self.get_geo_node(dir_1)
-        geo_2 = self.get_geo_node(dir_2)
-        route = self.nx.shortest_path(self.place, geo_1,
-                                      geo_2)
-        return route
-
     def street_replacement(self, street):
         msg = f"\"{street}\" doesn't found, do you mean:\n"
-        for sn in self.streets:
+        for sn in self.streets.keys():
             if street in sn:
                 msg += f'  - "{sn}"?\n'
         return msg
 
     def get_block(self, street, num_1, num_2, color):
-        assert street in self.streets, self.street_replacement(street)
+        assert street in self.streets.keys(), self.street_replacement(street)
         dir_1 = f'{street} {num_1}'
         dir_2 = f'{street} {num_2}'
         block = {}
@@ -57,11 +55,53 @@ class GeoLib:
         block['color'] = color
         return block
 
+    def get_route(self, dir_1, dir_2):
+        geo_1 = self.get_geo_node(dir_1)
+        geo_2 = self.get_geo_node(dir_2)
+        route = self.nx.shortest_path(self.place, geo_1,
+                                      geo_2)
+        return route
+
+    def get_block_iter(self, street, num_1, num_2, color,
+                       loops=3, step=10):
+        block = {}
+        block['route'] = None
+        block['name'] = f'{street} {num_1}-{num_2}'
+        block['color'] = color
+        assert street in self.streets.keys(), self.street_replacement(street)
+        for ll in range(loops):
+            if num_1 < num_2:
+                dir_1 = f'{street} {num_1 + (ll * step)}'
+                dir_2 = f'{street} {num_2 - (ll * step)}'
+            else:
+                dir_1 = f'{street} {num_2 + (ll * step)}'
+                dir_2 = f'{street} {num_1 - (ll * step)}'
+            try:
+                route = self.get_route(dir_1, dir_2)
+                if len(route) <= 3:
+                    block['route'] = route
+                    break
+                # else:
+                #     print(f'l: {ll}: {len(route)}')
+            except Exception as e:
+                # if e.message.find('Nomination could not') :
+                break
+        return block
+
     def get_route_html(self, route, route_map, color):
         colors = {'r': '#ff0000',
                   'g': '#00ff00',
                   'b': '#0000ff',
                  }
+        if color == 'random':
+            bands = 3
+            rand_int = [randint(16, 255) for _ in range(bands)]
+            rand_hex = [format(r, '#04x').replace('0x', '') for r in rand_int]
+            rand_color = '#'
+            for c in rand_hex:
+                rand_color += c
+            colors['random'] = rand_color
+
         assert color in colors.keys()
         return self.ox.plot_route_folium(self.place, route,
                                          popup_attribute='name',
@@ -95,21 +135,19 @@ class GeoLib:
                                       bgcolor='k',
                                       orig_dest_size=orig_dest_size)
 
-    def _get_streets(self):
+    def _get_streets(self, skip=['Rotonda']):
         G = self.ox.graph_from_address(self.place_name,
                                        dist=2000,
                                        network_type='walk')
         G = self.ox.get_undirected(G)
-        streets = []
+        streets = {}
         for _, edge in self.ox.graph_to_gdfs(G, nodes=False).fillna('').iterrows():
             street_name = edge['name']
-            # if street_name == 'Matheu':
-            #     print(edge)
-            if type(street_name) is list:
-                for sn in street_name:
-                    if sn != '' and sn not in streets:
-                        streets.append(sn)
-            else:
-                if street_name != '' and street_name not in streets:
-                    streets.append(street_name)
+            street_name = street_name if type(street_name) is list else [street_name]
+            for sn in street_name:
+                if sn != '' and sn not in streets.keys() and sn not in skip:
+                    streets[sn] = {}
+                else:
+                    # add min, max
+                    pass
         return streets
