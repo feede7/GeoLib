@@ -12,7 +12,7 @@ streets = city.streets.keys()
 zero = 0
 up_to = 4000
 
-routes = []streets.keys()
+routes = []
 
 l_s = len(streets)
 for i, street in enumerate(streets):
